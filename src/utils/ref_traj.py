@@ -56,15 +56,15 @@ class RefTraj:
                 ddy = self.y[i] - 2 * self.y[i-1] + self.y[i-2]
 
             else:
-                dx = self.x[i+1] - self.x[i-1]
-                dy = self.y[i+1] - self.y[i-1]
+                dx = 0.5 * (self.x[i+1] - self.x[i-1])
+                dy = 0.5 * (self.y[i+1] - self.y[i-1])
                 ddx = self.x[i+1] - 2 * self.x[i] + self.x[i-1]
                 ddy = self.y[i+1] - 2 * self.y[i] + self.y[i-1]
         
             self.psi.append(math.atan(dy/dx)) # 车身横摆角
             # 计算曲率
             kappa = (ddy * dx - ddx * dy) / (dx ** 2 + dy ** 2) ** 1.5
-            self.delta.append(math.atan(kappa * self.L))
+            self.delta.append(math.atan2(kappa * self.L,1))
             # 速度信息
             self.v.append((dy*dy + dx*dx)**0.5 / self.dt)  
             self.a.append(0)
