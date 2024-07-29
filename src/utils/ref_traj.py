@@ -56,8 +56,8 @@ class RefTraj:
                 ddy = self.y[i] - 2 * self.y[i-1] + self.y[i-2]
 
             else:
-                dx = self.x[i+1] - self.x[i-1]
-                dy = self.y[i+1] - self.y[i-1]
+                dx = 0.5 * (self.x[i+1] - self.x[i-1])
+                dy = 0.5 * (self.y[i+1] - self.y[i-1])
                 ddx = self.x[i+1] - 2 * self.x[i] + self.x[i-1]
                 ddy = self.y[i+1] - 2 * self.y[i] + self.y[i-1]
         

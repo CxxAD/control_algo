@@ -77,7 +77,7 @@ class SingleVehicleControlV(SingleStackModelBase):
         delta,v = u_r 
         A = np.array([
             [1,0,-v*sin(psi) * self.dt],
-            [0,1,v*cos(psi)*self.dt],
+            [0,1,v*cos(psi) * self.dt],
             [0,0,1]
         ])
 

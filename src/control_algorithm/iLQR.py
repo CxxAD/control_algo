@@ -15,90 +15,119 @@ lxx = Q
 luu = R
 lux = 0
 """
+import os 
+import sys 
+current_file_path = os.path.abspath(__file__)
+current_dir = os.path.dirname(current_file_path)
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+    sys.path.append(parent_dir)
+
 import numpy as np
+import lqr
 
-class iLQR():
-    def __init__(self,A,B,Q,R,Dx,Du,xn,un) -> None:
-        self.A = A  # 参考点香菇n
-        self.B = B 
-        self.Q = Q
-        self.R = R 
-        self.Dx = Dx
-        self.Du = Du
-        self.xn = xn 
-        self.un = un 
-    # 使用对应索引的点作为参考点？或者使用参考轨迹上最近的点作为参考点？
-    def backword(self,ref_X,ref_U):
-        # 生成 AB 
-        u_num = len(ref_U)
-        x_num = len(ref_X)
-        if x_num -1 != u_num:
-            raise ValueError("状态和控制数目不匹配")
-        xn = len(ref_X[0])
-        un = len(ref_U[0])
-        lx = np.zeros(xn)
-        lu = np.zeros(un)
-        np.fill_diagonal(lx,1)
-        np.fill_diagonal(lu,1)
-        lxx = np.eye(xn)
-        luu = np.eye(un)
-        lxu = np.zeros((xn,un))
-        lux = np.zeros((un,xn))
-
-        v_x = lx
-        v_xx = lxx 
-
-        k_seq = np.zeros((u_num,un))
-        K_seq = np.zeros((u_num,un,xn))
-        for ind in range(len(ref_U)-1,-1,-1):
-            # 反向传播
-            A = self.A(ref_X[ind],ref_U[ind])
-            B = self.B(ref_X[ind],ref_U[ind])
-            # 计算最优控制率 
-
-            lx = lx + A.T @ v_x
-            lu = lu + B.T @ v_x
-            lxx = lxx + A.T @ v_xx @ A
-            luu = luu + B.T @ v_xx @ B
-            lux = lux + B.T @ v_xx @ A
-            lxu = lxu + A.T @ v_xx @ B
-
-            k = -np.linalg.inv(luu) @ lu
-            K = -np.linalg.inv(luu) @ lux
-            v_x = lx + K.T @ luu @ k + K.T @ lu + lxu @ k
-            v_xx = lxx + K.T @ luu @ K + K.T @ lux + lxu @ K
-
-            k_seq[ind] = k
-            K_seq[ind] = K
+from utils.draw import DrawUtil
 
 
-    def forward(self,k,K,ref_X,ref_U):
-        X = np.zeros((len(ref_X),len(ref_X[0])))
-        X[0] = ref_X[0]
-        init_X = np.array(ref_X[0])
-        for ind in range(len(ref_U)):
-            opt_u = ref_U[ind] + k + K @ (X[ind] - ref_X[ind])
-            X[ind+1] = self.A(ref_X[ind],opt_u) @ ( X[ind] - ref_X[ind]) + self.B(ref_X[ind],opt_u) @ opt_u + X[ind]
-    
-    def gener_drivatives(self,ref_X,ref_U,u_num):
-        Lx = np.zeros((u_num,self.xn,1))
-        Lu = np.zeros((u_num,self.un,1))
-        Lxx = np.zeros((u_num,self.xn,self.xn))
-        Luu = np.zeros((u_num,self.un,self.un))
-        Lux = np.zeros((u_num,self.un,self.xn))
-        Lxu = np.zeros((u_num,self.xn,self.un))
+drwa_util = DrawUtil()
+class iLQR(lqr.LQR):
+    def __init__(self,xn,un) -> None:
+        # 初始化原始代价函数的各参数
+        # self.Q = np.zeros((xn,xn))
+        # self.R = np.zeros((un,un))
+        # self.Dx = np.zeros((xn,1))
+        # self.Du = np.zeros((un,1))
+
+        # for i in range(xn-1):
+        #     self.Q[i,i] = 3
+        #     self.Dx[i] = 1 
+        # self.Q[xn-1,xn-1] = 1
+
+        # for i in range(un):
+        #     self.R[i,i] = 1
+        #     self.Du[i] = 1
+
+        self.Q = np.array([
+            [1,0,0],
+            [0,1,0],
+            [0,0,1]
+        ])
+        self.R = np.array([
+            [1,0],
+            [0,1]
+        ])
+        self.Dx = np.array([
+            [1],
+            [1],
+            [1]
+        ])
+        self.Du = np.array([
+            [1],
+            [1]
+        ])
+        
+
+    def gener_drivatives(self,x_new,x_old,u_new,u_old,xn,un,u_num):
+        Lx = np.zeros((u_num,xn,1))
+        Lu = np.zeros((u_num,un,1))
+        Lxx = np.zeros((u_num,xn,xn))
+        Luu = np.zeros((u_num,un,un))
+        Lux = np.zeros((u_num,un,xn))
+        Lxu = np.zeros((u_num,xn,un))
         for i in range(u_num):
-            Lx[i] =self.Q @ ref_X[i] + self.Dx
-            Lu[i] = self.R @ ref_U[i] + self.Du
-            Lxx[i] = self.Q
+            # Lu[i] = self.R @ (u_new[i] - u_old[i]).reshape((un,1)) + self.Du
+            Lu[i] = self.Du
             Luu[i] = self.R
-            Lxu[i] = np.zeros((self.xn,self.un))
-            Lux[i] = np.zeros((self.un,self.xn))
+            Lxu[i] = np.zeros((xn,un))
+            Lux[i] = np.zeros((un,xn))
+            # Lx[i] =  self.Q @ (x_new[i] - x_old[i]).reshape((xn,1)) + self.Dx
+            Lx[i]  = self.Dx
+            Lxx[i] = self.Q
         return Lx,Lu,Lxx,Luu,Lux,Lxu
 
-    def opt(self,ref_X,ref_U):
+    def opt(self,f_AB,ref_X,ref_U,iter_num):
+        x_init = ref_X[0]
         x_num = len(ref_X)
         u_num = len(ref_U) 
+        xn = len(ref_X[0])
+        un = len(ref_U[0])
+        A = np.zeros((x_num-1,xn,xn))
+        B = np.zeros((x_num-1,xn,un))
+        x_old = ref_X
+        u_old = ref_U
+        x_new = ref_X
+        u_new = ref_U
         # 构建误差模型二次型的Q,R矩阵
-        Lx,Lu,Lxx,Luu,Lux,Lxu = self.gener_drivatives(ref_X,ref_U,u_num)
-        # LQR求解器。
+        for i in range(iter_num):
+            print("iter num:",i)
+            for ind in range(len(ref_X)-1):
+                _A,_B = f_AB(x_new[ind],u_new[ind]) # 参考点怎么选？
+                A[ind] = _A
+                B[ind] = _B
+            Lx,Lu,Lxx,Luu,Lux,Lxu = self.gener_drivatives(x_new,x_old,u_new,u_old,xn,un,u_num) 
+            # 输入都是最原始的形式，模型的误差形式在算法内部构建，输出也是标准形式，而非误差量。
+            print("ILQR 输出：")
+            print("refX",ref_X[:4])
+            print("refU",ref_U[:4])
+            print("A",A[:4])
+            print("B",B[:4])
+            print("Lxx",Lxx[:4])
+            print("Luu",Luu[:4])
+            print("Lx",Lx[:4])
+            print("Lu",Lu[:4])
+            print("Lxu",Lxu[:4])
+            print("Lux",Lux[:4])
+            x_tmp,u_tmp = self.solve_iter(x_new[0],x_new[1:],u_new,A,B,Lxx,Luu,Lx,Lu,Lxu,Lux,xn,un,u_num)
+            drwa_util.draw_state(x_new,"x-y-psi","opt_traj")
+            drwa_util.draw_contour(u_new,"delta-v","opt_traj_U")
+            drwa_util.draw()
+            # 退出条件: 误差小于阈值
+            if np.linalg.norm(x_tmp - x_new) < 1e-5:
+                print("Converged！")
+                break
+            x_old = x_new
+            u_old = u_new
+            x_new = x_tmp
+            u_new = u_tmp 
+        return x_tmp,u_tmp

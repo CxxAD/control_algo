@@ -24,24 +24,24 @@ class DrawUtil():
         state_eles = lab.split('-')
         if len(state_eles) == 2:
             if state_eles[1] == 'a':
-                a = [traj[i][0] for i in range(len(traj))]
+                a = [traj[i][1] for i in range(len(traj))]
                 self.ax_a.plot([i*0.1 for i in range(len(a))],a,label=name)
             elif state_eles[1] == 'delta':
-                delta = [traj[i][0] for i in range(len(traj))]
+                delta = [traj[i][1] for i in range(len(traj))]
                 self.ax_delta.plot([i*0.1 for i in range(len(delta))],delta,label=name)
             elif state_eles[1] == 'v':
-                v = [traj[i][0] for i in range(len(traj))]
+                v = [traj[i][1] for i in range(len(traj))]
                 self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name)
             else:
                 raise ValueError("Please input correct state")
             if state_eles[0] == 'a':
-                a = [traj[i][1] for i in range(len(traj))]
+                a = [traj[i][0] for i in range(len(traj))]
                 self.ax_a.plot([i*0.1 for i in range(len(a))],a,label=name)
             elif state_eles[0] == 'delta':
-                delta = [traj[i][1] for i in range(len(traj))]
+                delta = [traj[i][0] for i in range(len(traj))]
                 self.ax_delta.plot([i*0.1 for i in range(len(delta))],delta,label=name)
             elif state_eles[0] == 'v':
-                v = [traj[i][1] for i in range(len(traj))]
+                v = [traj[i][0] for i in range(len(traj))]
                 self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name)
             else:
                 raise ValueError("Please input correct state")
@@ -54,19 +54,19 @@ class DrawUtil():
         self.ax_xy.plot(x,y,label=name)
         if state_eles[2] == 'v':
             v = [traj[i][2] for i in range(len(traj))]
-            self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name)
+            self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name,marker='o')
         elif state_eles[2] == 'psi':
             psi = [traj[i][2] for i in range(len(traj))]
-            self.ax_psi.plot([i*0.1 for i in range(len(psi))],psi,label=name)
+            self.ax_psi.plot([i*0.1 for i in range(len(psi))],psi,label=name,marker='.')
         else:
             raise ValueError("Please input correct state")
         if len(state_eles) == 4:
             if state_eles[3] == 'v':
                 v = [traj[i][3] for i in range(len(traj))]
-                self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name)
+                self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name,marker='o')
             elif state_eles[3] == 'psi':
                 psi = [traj[i][3] for i in range(len(traj))]
-                self.ax_psi.plot([i*0.1 for i in range(len(psi))],psi,label=name)
+                self.ax_psi.plot([i*0.1 for i in range(len(psi))],psi,label=name,marker='.')
             else:
                 raise ValueError("Please input correct state")
             
