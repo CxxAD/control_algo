@@ -90,9 +90,10 @@ class iLQR(lqr.LQR):
         Luu = np.zeros((u_num,un,un))
         Lux = np.zeros((u_num,un,xn))
         Lxu = np.zeros((u_num,xn,un))
+        # 只要求跟好状态量，因此，控制量期望可以为0.
         for i in range(u_num):
             # 控制量期望为0，所以 U[i] - [0,0..]
-            Lu[i] = 2*self.R @ U[i].reshape((un,1)) + self.Du
+            Lu[i] = 2*self.R @ U[i].reshape((un,1)) + self.Du  
             Luu[i] = 2*self.R
             Lxu[i] = np.zeros((xn,un))
             Lux[i] = np.zeros((un,xn))
@@ -127,7 +128,7 @@ class iLQR(lqr.LQR):
             print("iter num:",i)
             drwa_util = DrawUtil()
             for ind in range(len(ref_X)-1):
-                _A,_B = f_AB(X[ind+1],U[ind]) # 优化轨迹自身作为展开点.
+                _A,_B = f_AB(X[ind+1],U[ind]) # 优化轨迹自身作为展开点,通过不断迭代来逼近参考轨迹。
                 A[ind] = _A
                 B[ind] = _B
             Lx,Lu,Lxx,Luu,Lux,Lxu = self.gener_drivatives(X[1:],U,ref_X[1:],ref_U,xn,un,u_num) 

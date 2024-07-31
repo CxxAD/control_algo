@@ -44,10 +44,10 @@ def test_vehicle_model_controlA_sin_curva():
     # ref_traj = get_ref_traj(2,control_type='v-delta',v=[1 + random.uniform(-0.2,0.2) for i in range(100)],delta=[0.1  for i in range(100)])
     # ref_X = [[ref_traj.x[ind],ref_traj.y[ind],ref_traj.psi[ind]]\
     #             for ind in range(len(ref_traj.x))] # n
-    for i in range(len(ref_X)):
-        if i > 40:
+    # for i in range(len(ref_X)):
+        # if i > 40:
             # ref_X[i][0] += 0
-            ref_X[i][1] += 10
+            # ref_X[i][1] += 10
     ref_U = np.array([[ref_traj.delta[ind],ref_traj.v[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1
     draw_util.draw_state(ref_X,"x-y-psi","ref_traj_base_U") # 
     draw_util.draw_contour(ref_U,"delta-v","ref_traj_base_U")
@@ -55,7 +55,7 @@ def test_vehicle_model_controlA_sin_curva():
 
     def LQR_solver():
     # algorithm
-        vehicle_model = SingleVehicleControlV(2.3)
+        vehicle_model = SingleVehicleControlV(*ref_X[0],ref_U[0][1],2.3)
         lqr = LQR()
         # 求最优控制序列 
         x_num = len(ref_traj.x) 
@@ -79,8 +79,10 @@ def test_vehicle_model_controlA_sin_curva():
         Du = np.array([[1],[1]])
         A = np.zeros((len(ref_X)-1,len(ref_X[0]),len(ref_X[0])))
         B = np.zeros((len(ref_X)-1,len(ref_X[0]),len(ref_U[0])))
+
         for ind in range(len(ref_X)-1):
-            _A,_B = vehicle_model.state_space(ref_X[ind+1],ref_U[ind])
+            # 如何选择展开点？以自身轨迹作为展开点？
+            _A,_B = vehicle_model.state_space(ref_X[ind+1],ref_U[ind]) # TODO:改为最近点
             A[ind] = _A
             B[ind] = _B
         Lx = np.zeros((u_num,xn,1))
@@ -95,19 +97,10 @@ def test_vehicle_model_controlA_sin_curva():
             Lxx[i] = Q 
             Lxu[i] = np.zeros((xn,un))
             Lux[i] = np.zeros((un,xn))
+            Luu[i] = R 
+
         
     # self,x_ref,u_ref,A,B,lxx,luu,l_x,l_u,lxu,lux,xn,un,num
-        print("LQR 输出：")
-        print("refX",ref_X[:4])
-        print("refU",ref_U[:4])
-        print("A",A[:4])
-        print("B",B[:4])
-        print("Lxx",Lxx[:4])
-        print("Luu",Luu[:4])
-        print("Lx",Lx[:4])
-        print("Lu",Lu[:4])
-        print("Lxu",Lxu[:4])
-        print("Lux",Lux[:4])
         return lqr.solve_iter(ref_X[0],np.array(ref_X),np.array(ref_U),A,B,Lxx,Luu,Lx,Lu,Lxu,Lux,xn,un,u_num,vehicle_model.update)
 
     # LQR-racati求解，调试完成，关注重点：如何保证参考点正确更新。-->额外控制v，确保自车速度贴近参考速度。
@@ -188,7 +181,7 @@ def test_vehicle_model_controlA_sin_curva():
         ilqr = iLQR(xn,un)
         return ilqr.opt(vehicle_model.state_space,np.array(ref_X),np.array(ref_U),10,vehicle_model.update)
     
-    opt_traj,opt_u = LQR_racati_solver()
+    opt_traj,opt_u = LQR_solver()
     draw_util.draw_state(opt_traj,"x-y-psi","opt_traj")
     draw_util.draw_contour(opt_u,"delta-v","opt_traj_U")
 

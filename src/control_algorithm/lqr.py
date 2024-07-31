@@ -12,14 +12,15 @@ LQR 求解器，黎卡提递归.
 Q:
 1. 轨迹点间gap过大的话，可能导致连续很多次求解都是同一个参考点，从而规划出一个逐渐减速停止的轨迹，始终无法到达目标点，如何解决？
 速度不采用LQR控制，可以保证速度量不会因为参考点的选择而接近0，而是接近参考点的速度，从而可以保证车辆能够突破gap过大导致的停止问题。
-2. 
+2. 动规形式LQR，如果动力学模型的线性化采用泰勒展开，则A,B需要参考点来做展开，导致只能使用参考轨迹ind做参考点，从而误差较大；且如果轨迹有突变，前后两个点无法光滑过渡，则很可能无解。
+A：LQR的局限性，能使用的信息有限，只能依靠起点、终点两个点来进行优化，一旦模型本身需要展开点信息，则要求参考轨迹相对合理，能光滑过渡才行。理论上，迭代解法应该可以解决该问题，<待尝试>。
 """
 import numpy as np 
 
 class LQR:
 
     def __init__(self) -> None:
-        pass
+        pass 
 
     def solve(self, A, B, Q, R):
         """
@@ -75,7 +76,7 @@ class LQR:
             V_xx = C_xx + K.T @ C_ux + C_xu @ K + K.T @ C_uu @ K
             V_x = C_x + C_xu @ k + K.T @ C_u  + K.T @ C_uu @ k
             # const = const + k.T @ C_u + 0.5 * k.T @ C_uu @ k
-
+            # 这里这个ind，怎么选择？
             C_xx = Q_xx[ind] + A[ind].T @ V_xx @ A[ind]
             C_xu = Q_xu[ind] + A[ind].T @ V_xx @ B[ind]
             C_ux = Q_ux[ind] + B[ind].T @ V_xx @ A[ind]
@@ -91,6 +92,7 @@ class LQR:
         x_new_seq[0] = x_init
         for ind in range(num-1):
             u_new = (k_seq[ind].flatten() + (K_seq[ind] @ (x_new_seq[ind] - X[ind]).T) + U[ind]).T
+            print(x_new_seq[ind],u_new)
             x_new_seq[ind+1] = func(x_new_seq[ind],u_new) # 用原非线性函数更新状态量，减小误差。
             u_new_seq[ind] = u_new
         return x_new_seq,u_new_seq
