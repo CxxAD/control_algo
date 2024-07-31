@@ -23,6 +23,7 @@ class RefTraj:
         self.v = [] 
         self.a = []
         self.delta = [] 
+        self.raw_rate = [] 
         self.total_time = total_time
         self.dt = dt 
         self.num = int(self.total_time / self.dt)
@@ -69,6 +70,8 @@ class RefTraj:
             self.v.append((dy*dy + dx*dx)**0.5 / self.dt)  
         for i in range(len(self.v)-1):
             self.a.append((self.v[i+1] - self.v[i]) / self.dt)
+            # 弧度的计算，需要特殊处理。(state[3] + control[1]*Ts)%(2*np.pi)
+            self.raw_rate.append((self.psi[i+1] - self.psi[i]) / self.dt)
         
     def generate_straight_line(self,k):
         self.clear()

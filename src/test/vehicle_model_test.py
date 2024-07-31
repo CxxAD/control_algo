@@ -28,6 +28,7 @@ def get_ref_traj(traj_type = -1,const_arg=1,a = -1,delta = -1,v=-1,control_type=
 
 def test_vehicle_model_controlA_sin_curva():
     ref_traj = get_ref_traj(traj_type=0,const_arg=3)
+    
     # ref_X = [[ref_traj.x[ind],ref_traj.y[ind],ref_traj.psi[ind]]\
     #           for ind in range(len(ref_traj.x))] # n
     # # ref U 
@@ -175,9 +176,9 @@ def test_vehicle_model_controlA_sin_curva():
         ref_X = [[ref_traj.x[ind],ref_traj.y[ind],ref_traj.v[ind],ref_traj.psi[ind]]\
                 for ind in range(len(ref_traj.x))] # n
         # ref U 
-        ref_U = np.array([[ref_traj.a[ind],ref_traj.delta[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1 
-        draw_util.draw_state(ref_X,"x-y-psi","ref_traj_base_U") # 
-        draw_util.draw_contour(ref_U,"delta-v","ref_traj_base_U")
+        ref_U = np.array([[ref_traj.a[ind],ref_traj.raw_rate[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1 
+        draw_util.draw_state(ref_X,"x-y-v-psi","ref_traj_base_U") # 
+        draw_util.draw_contour(ref_U,"a-raw_rate","ref_traj_base_U")
         # 第一个点用ref的起点，是ok的
         vehicle_model = CILQRModel(2.3)
         xn = len(ref_X[0])

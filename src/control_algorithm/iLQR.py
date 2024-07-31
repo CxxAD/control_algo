@@ -99,12 +99,14 @@ class iLQR(lqr.LQR):
         # 只要求跟好状态量，因此，控制量期望可以为0.
         for i in range(u_num):
             # 控制量期望为0，所以 U[i] - [0,0..]
-            _u = np.array([U[i][0] - 0,U[i][1] - 2])
-            Lu[i] = 2*self.R @ _u.reshape((un,1))
+            # _u = np.array([U[i][0] - 0,U[i][1]])
+            Lu[i] = 2*self.R @ U[i].reshape((un,1))
             Luu[i] = 2*self.R
             Lxu[i] = np.zeros((xn,un))
             Lux[i] = np.zeros((un,xn))
-            c_ind = self._find_cloest_point(X[i],x_ref)
+            # c_ind = self._find_cloest_point(X[i],x_ref)
+            c_ind = i 
+            print("c_ind",c_ind)
             # 以参考为期望，合理的。-->以最近点为期望也行，但是就变成迭代的过程了。
             _x = np.array([X[i][0] - x_ref[c_ind][0],X[i][1] - x_ref[c_ind][1],X[i][2] - 2,0])
             Lx[i] =  2*self.Q @ _x.reshape((xn,1)) 
@@ -130,17 +132,28 @@ class iLQR(lqr.LQR):
         X_0 = ref_X[0]
         U = np.zeros((u_num,un))
         # 生成初始解
-        U[:,0] = 0.5
-        X = self.gener_init_traj(X_0,U,func)  # 
+        # U[:,0] = 0.5
+        # X = self.gener_init_traj(X_0,U,func)  # 
 
+        X0,U = read_txt('/media/cxx/6FDD-8BC7/control_algo/src/test/tmp.txt')
+        U = np.reshape(U,(-1,2))
+        X = self.gener_init_traj(X0,U,func)
+        # drwa_util = DrawUtil()
+        # drwa_util.draw_state(X,"x-y-v-psi","ref")
+        # drwa_util.draw_contour(U,"a-delta","opt_traj_U")
+        # drwa_util.draw()
+        # return 
+        # drwa_util.draw()
         # 构建误差模型二次型的Q,R矩阵
         for i in range(iter_num):
+            drwa_util = DrawUtil()
+            drwa_util.draw_state(ref_X,"x-y-v-psi","ref")
+            drwa_util.draw_contour(ref_U,"a-delta","opt_traj_U")
             print("iter num:",i)
             # 重置运动学模型：
             # model.reset(*ref_X[0],ref_U[0][1])
-            drwa_util = DrawUtil()
             for ind in range(len(ref_X)-1):
-                _A,_B = f_AB(X[ind+1],U[ind]) # 优化轨迹自身作为展开点,通过不断迭代来逼近参考轨迹。
+                _A,_B = f_AB(ref_X[ind+1],ref_U[ind]) # 优化轨迹自身作为展开点,通过不断迭代来逼近参考轨迹。
                 A[ind] = _A
                 B[ind] = _B
             Lx,Lu,Lxx,Luu,Lux,Lxu = self.gener_drivatives(X[1:],U,ref_X[1:],ref_U,xn,un,u_num) 
@@ -149,6 +162,18 @@ class iLQR(lqr.LQR):
             # 返回优化轨迹
             drwa_util.draw_state(X,"x-y-psi","ref")
             drwa_util.draw_contour(U,"delta-v","opt_traj_U")
+            print("ILQR input args:")
+            print("X:",X[:5])
+            print("U:",U[:5])
+            print("A:",A[:5])
+            print("B:",B[:5])
+            print("Lx:",Lx[:5])
+            print("Lu:",Lu[:5])
+            print("Lxx:",Lxx[:5])
+            print("Luu:",Luu[:5])
+            print("Lux:",Lux[:5])
+            print("Lxu:",Lxu[:5])
+
             x_tmp,u_tmp = self.solve_iter(X[0],X[1:],U,A,B,Lxx,Luu,Lx,Lu,Lxu,Lux,xn,un,u_num,func)
             drwa_util.draw_state(x_tmp,"x-y-psi","opt_traj")
             drwa_util.draw_contour(u_tmp,"delta-v","opt_traj_U")
@@ -160,3 +185,24 @@ class iLQR(lqr.LQR):
             X = x_tmp
             U = u_tmp
         return x_tmp,u_tmp
+
+
+def read_txt(path):
+    data = []
+    with open(path,"r") as f:
+        for line in f.readlines():
+            print(line)
+            line = line.strip()
+            if line.find('] [') == -1:
+                X0 = [float(i) for i in line[1:-1].split(" ") if i.strip() != ''] 
+            else:
+                gap_ind = line.find('] [')
+                data.append([float(i) for i in line[gap_ind+3:-1].split(" ") if i.strip() != ''])
+        
+
+    return X0, data
+
+
+if __name__ == "__main__":
+    import pprint
+    pprint.pprint(read_txt('/media/cxx/6FDD-8BC7/control_algo/src/test/tmp.txt'))

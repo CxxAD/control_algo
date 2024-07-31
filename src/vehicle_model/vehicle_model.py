@@ -170,11 +170,11 @@ class CILQRModel(SingleStackModelBase):
     """
     def __init__(self, L,dt=0.1):
         self.wheelbase = L
-        # self.steer_min = args.steer_angle_limits[0]
-        # self.steer_max = args.steer_angle_limits[1]
-        # self.accel_min = args.acc_limits[0]
-        # self.accel_max = args.acc_limits[1]
-        # self.max_speed = args.max_speed
+        self.steer_min = -20/180*np.pi
+        self.steer_max = 20/180
+        self.accel_min = -3
+        self.accel_max = 2
+        self.max_speed = 10
         self.Ts = dt
         
     def update(self, state, control):
@@ -184,11 +184,13 @@ class CILQRModel(SingleStackModelBase):
         # Clips the controller values between min and max accel and steer values
         # control[0] = np.clip(control[0], self.accel_min, self.accel_max)
         # control[1] = np.clip(control[1], state[2]*tan(self.steer_min)/self.wheelbase, state[2]*tan(self.steer_max)/self.wheelbase)
-        
+        # control[0] = np.clip(control[0], self.accel_min, self.accel_max)
+        # control[1] = np.clip(control[1], state[2]*tan(self.steer_min)/self.wheelbase, state[2]*tan(self.steer_max)/self.wheelbase)
         next_state = np.array([state[0] + cos(state[3])*(state[2]*self.Ts + (control[0]*self.Ts**2)/2),
                                state[1] + sin(state[3])*(state[2]*self.Ts + (control[0]*self.Ts**2)/2),
-                               state[2] + control[0]*self.Ts,
-                               state[3] + control[1]*self.Ts])  # wrap angles between 0 and 2*pi - Gave me error
+                            #    np.clip(state[2] + control[0]*self.Ts, 0.0, self.max_speed),
+                                state[2] + control[0] * self.Ts,
+                               state[3] + control[1] * self.Ts])  # wrap angles between 0 and 2*pi - Gave me error
         return next_state
 
     def state_space(self,x_r,u_r):
@@ -197,11 +199,11 @@ class CILQRModel(SingleStackModelBase):
         A = np.array([[1, 0, cos(theta)*self.Ts, -(v*self.Ts + (v_dot*self.Ts**2)/2)*sin(theta)],
                       [0, 1, sin(theta)*self.Ts,  (v*self.Ts + (v_dot*self.Ts**2)/2)*cos(theta)],
                       [0, 0,                  1,                                        0],
-                      [0, 0,                  1/self.wheelbase * tan(delta),                    1]])
+                      [0, 0,                  0,                    1]])
         B = np.array([[self.Ts**2*cos(theta)/2,        0],
                       [self.Ts**2*sin(theta)/2,        0],
                       [         self.Ts,        0],
-                      [                0, self.Ts * v / self.wheelbase / (cos(delta)*cos(delta))]])
+                      [                0, self.Ts]])
         return A,B
 
 

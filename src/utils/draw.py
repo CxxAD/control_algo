@@ -19,6 +19,8 @@ class DrawUtil():
         self.ax_a.set_xlabel("a",fontsize=12)
         self.ax_delta = plt.subplot(3,2,4)
         self.ax_delta.set_xlabel("delta",fontsize=12)
+        self.ax_raw_rate = plt.subplot(3,2,6)
+        self.ax_raw_rate.set_xlabel("raw_rate",fontsize=12)
         plt.subplots_adjust(wspace = 0.5,hspace = 0.5)
 
     def draw_contour(self,traj,lab,name):
@@ -33,6 +35,9 @@ class DrawUtil():
             elif state_eles[1] == 'v':
                 v = [traj[i][1] for i in range(len(traj))]
                 self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name)
+            elif state_eles[1] == 'raw_rate':
+                raw_rate = [traj[i][1] for i in range(len(traj))]
+                self.ax_raw_rate.plot([i*0.1 for i in range(len(raw_rate))],raw_rate,label=name)
             else:
                 raise ValueError("Please input correct state")
             if state_eles[0] == 'a':
@@ -44,6 +49,9 @@ class DrawUtil():
             elif state_eles[0] == 'v':
                 v = [traj[i][0] for i in range(len(traj))]
                 self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name)
+            elif state_eles[1] == 'raw_rate':
+                raw_rate = [traj[i][1] for i in range(len(traj))]
+                self.ax_raw_rate.plot([i*0.1 for i in range(len(raw_rate))],raw_rate,label=name)
             else:
                 raise ValueError("Please input correct state")
         

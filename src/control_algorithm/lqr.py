@@ -58,7 +58,7 @@ class LQR:
                 lam *= 10
         return C_uu + lam * np.eye(C_uu.shape[0])
     
-    def _backward_pass(self,A,B,Q_xx,Q_uu,D_x,D_u,Q_xu,Q_ux,xn,un,num):
+    def _backward_pass(self,A,B,Q_xx,Q_uu,D_x,D_u,Q_xu,Q_ux,xn,un,num,lamb):
         """
         动规求解
         """ 
@@ -76,6 +76,11 @@ class LQR:
         K_seq = np.zeros((num,un,xn)) # 2 * 3 
         for ind in range(num-1,-1,-1):
             C_uu_inv = np.linalg.inv(self.LM(C_uu))
+
+            C_uu_evals,C_uu_evecs = np.linalg.eig(C_uu)
+            C_uu_evals[C_uu_evals < 0] = 0.0 
+            C_uu_evals += lamb 
+            C_uu_inv = np.dot(C_uu_evecs,np.dot(np.diag(1.0/C_uu_evals),C_uu_evecs.T))
             K = -C_uu_inv @ C_ux 
             k = -C_uu_inv @ C_u
 
@@ -105,7 +110,7 @@ class LQR:
         for ind in range(num-1):
             # 前轮转角为控制量，这个运算会有问题，因为可能出现减法，角度的加减运算，不满足线性规则。
             u_new = (k_seq[ind].flatten() + (K_seq[ind] @ (x_new_seq[ind] - X[ind]).T) + U[ind]).T
-            u_new[0] = normalize_angle(u_new[0])
+            # u_new[0] = normalize_angle(u_new[0])
             print("update:",x_new_seq[ind],u_new)
             x_new_seq[ind+1] = func(x_new_seq[ind],u_new) # 用原非线性函数更新状态量，减小误差。
             u_new_seq[ind] = u_new
@@ -115,7 +120,8 @@ class LQR:
         """
         迭代求解
         """
-        k_seq,K_seq = self._backward_pass(A,B,lxx,luu,l_x,l_u,lxu,lux,xn,un,num)
+        lamd = 1
+        k_seq,K_seq = self._backward_pass(A,B,lxx,luu,l_x,l_u,lxu,lux,xn,un,num,lamd)
         # 因为是用的x,u做的展开点，所以这里生成的时候，还是用的x,u 
         x_new_seq,u_new_seq = self._forward_pass(x_init,k_seq,K_seq,A,B,x,u,num+1,func)
         
