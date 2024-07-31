@@ -8,6 +8,11 @@ LQR 求解器，黎卡提递归.
 那么，该怎么选择参考点呢？
 方案一：选择最近的点作为参考点，这样，可以保证当前状态下的最优控制量是最接近的。
 方案二：选择对应索引的点作为参考点，这样，可以保证和整个轨迹在逐步接近。
+
+Q:
+1. 轨迹点间gap过大的话，可能导致连续很多次求解都是同一个参考点，从而规划出一个逐渐减速停止的轨迹，始终无法到达目标点，如何解决？
+速度不采用LQR控制，可以保证速度量不会因为参考点的选择而接近0，而是接近参考点的速度，从而可以保证车辆能够突破gap过大导致的停止问题。
+2. 
 """
 import numpy as np 
 
@@ -86,7 +91,7 @@ class LQR:
         x_new_seq[0] = x_init
         for ind in range(num-1):
             u_new = (k_seq[ind].flatten() + (K_seq[ind] @ (x_new_seq[ind] - X[ind]).T) + U[ind]).T
-            x_new_seq[ind+1] = func(x_new_seq[ind],u_new)
+            x_new_seq[ind+1] = func(x_new_seq[ind],u_new) # 用原非线性函数更新状态量，减小误差。
             u_new_seq[ind] = u_new
         return x_new_seq,u_new_seq
 

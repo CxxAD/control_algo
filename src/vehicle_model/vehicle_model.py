@@ -71,9 +71,9 @@ class SingleVehicleControlV(SingleStackModelBase):
     def update(self,X,U):
         x,y,psi = X 
         delta,v = U 
-        self.x = self.x + self.v * cos(self.psi) * self.dt 
-        self.y = self.y + self.v * sin(self.psi) * self.dt
-        self.psi = self.psi + self.v / self.L * delta * self.dt
+        self.x = self.x + v * cos(self.psi) * self.dt 
+        self.y = self.y + v * sin(self.psi) * self.dt
+        self.psi = self.psi + v / self.L * delta * self.dt
         # self.v = self.v + a * self.dt 
         self.v = v 
 
@@ -85,15 +85,15 @@ class SingleVehicleControlV(SingleStackModelBase):
         x,y,psi = x_r
         delta,v = u_r 
         A = np.array([
-            [1,0,-self.v*sin(psi) * self.dt],
-            [0,1,self.v*cos(psi)* self.dt],
+            [1,0,-v*sin(psi) * self.dt],
+            [0,1,v*cos(psi)* self.dt],
             [0,0,1]
         ])
 
         B = np.array([
             [0,self.dt * cos(psi)],
             [0,self.dt * sin(psi)],
-            [self.v * self.dt / self.L / cos(delta) / cos(delta),self.dt * tan(delta) / self.L]
+            [v * self.dt / self.L / cos(delta) / cos(delta),self.dt * tan(delta) / self.L]
         ])
         return A,B
 

@@ -45,8 +45,8 @@ def test_vehicle_model_controlA_sin_curva():
     # ref_X = [[ref_traj.x[ind],ref_traj.y[ind],ref_traj.psi[ind]]\
     #             for ind in range(len(ref_traj.x))] # n
     for i in range(len(ref_X)):
-        if i > 20:
-            # ref_X[i][0] += 3
+        if i > 40:
+            # ref_X[i][0] += 0
             ref_X[i][1] += 10
     ref_U = np.array([[ref_traj.delta[ind],ref_traj.v[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1
     draw_util.draw_state(ref_X,"x-y-psi","ref_traj_base_U") # 
@@ -110,10 +110,11 @@ def test_vehicle_model_controlA_sin_curva():
         print("Lux",Lux[:4])
         return lqr.solve_iter(ref_X[0],np.array(ref_X),np.array(ref_U),A,B,Lxx,Luu,Lx,Lu,Lxu,Lux,xn,un,u_num,vehicle_model.update)
 
+    # LQR-racati求解，调试完成，关注重点：如何保证参考点正确更新。-->额外控制v，确保自车速度贴近参考速度。
     def LQR_racati_solver():
         vehicle_model = SingleVehicleControlV(*ref_X[0],ref_U[0][1],2.3)
         lqr = LQR()
-        pid = PID(1.1,0.5,0.2,1.1,4,-4)
+        pid = PID(1.1,0.5,0.2,2,4,-4)
         # opt ans 
         opt_traj = [ref_X[0]] 
         opt_u = []
@@ -127,12 +128,12 @@ def test_vehicle_model_controlA_sin_curva():
         ])
         # 控制权重
         R = np.array([
-            [2,0],
+            [1,0],
             [0,1]
         ])
         v_init = ref_U[0][1]
         print("vvvv:",v_init)
-        for i in range(step - 1):
+        for i in range(700):
             # 状态空
             # ref_ind = -1 
             # old_dis = 1e9
@@ -147,10 +148,13 @@ def test_vehicle_model_controlA_sin_curva():
             #         old_dis = dis
             # ref_ind = i
 
+            # 
             d_x = []
             d_y = []
             d = []
             for k in range(len(ref_X)):
+                if k == len(ref_X) - 1:
+                    break
                 d_x.append(ref_X[k][0]- x)
                 d_y.append(ref_X[k][1] -y)
                 d.append((d_x[k] ** 2 + d_y[k] ** 2)**0.5)
@@ -163,10 +167,12 @@ def test_vehicle_model_controlA_sin_curva():
             # 求解最优控制序列
             K,P = lqr.solve(A,B,Q,R)
             # 计算控制量
-            print("K",K)
+            # print("K",K)
+            print("ref_ind",ref_ind)
             print("opt_traj - ref_X",np.array(opt_traj[i]) - np.array(ref_X[ref_ind]))
             u = -K @ (np.array(opt_traj[i]) - np.array(ref_X[ref_ind])) + np.array(ref_U[ref_ind])
             # u = [0.1,1]
+            pid.set_target(ref_U[ref_ind][1])
             v_u = pid.cal_output(v_init)
             v_init = 0.1 * v_u + v_init
             u = [u[0],v_init]

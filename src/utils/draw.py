@@ -3,7 +3,8 @@
 """
 
 # [x,y,v,psi]
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+from numpy import size 
 
 
 class DrawUtil():
@@ -51,7 +52,7 @@ class DrawUtil():
         # 必须x-y起头
         x = [traj[i][0] for i in range(len(traj))]
         y = [traj[i][1] for i in range(len(traj))]
-        self.ax_xy.plot(x,y,label=name)
+        self.ax_xy.scatter(x,y,s=0.1,label=name)
         if state_eles[2] == 'v':
             v = [traj[i][2] for i in range(len(traj))]
             self.ax_v.plot([i*0.1 for i in range(len(v))],v,label=name,marker='o')
