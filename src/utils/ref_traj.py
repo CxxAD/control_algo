@@ -67,7 +67,8 @@ class RefTraj:
             self.delta.append(math.atan2(kappa * self.L,1))
             # 速度信息
             self.v.append((dy*dy + dx*dx)**0.5 / self.dt)  
-            self.a.append(0)
+        for i in range(len(self.v)-1):
+            self.a.append((self.v[i+1] - self.v[i]) / self.dt)
         
     def generate_straight_line(self,k):
         self.clear()

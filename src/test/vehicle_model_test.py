@@ -9,8 +9,7 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-
-from vehicle_model.vehicle_model import SingleVehicleControlV,SingleVehicleControlA,SingleVehicleLon
+from vehicle_model.vehicle_model import SingleVehicleControlV,SingleVehicleControlA,SingleVehicleLon,CILQRModel
 from utils.ref_traj import RefTraj
 from control_algorithm.lqr import LQR
 from control_algorithm.iLQR import iLQR
@@ -29,10 +28,10 @@ def get_ref_traj(traj_type = -1,const_arg=1,a = -1,delta = -1,v=-1,control_type=
 
 def test_vehicle_model_controlA_sin_curva():
     ref_traj = get_ref_traj(traj_type=0,const_arg=3)
-    ref_X = [[ref_traj.x[ind],ref_traj.y[ind],ref_traj.psi[ind]]\
-              for ind in range(len(ref_traj.x))] # n
-    # ref U 
-    ref_U = np.array([[ref_traj.delta[ind],ref_traj.v[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1  
+    # ref_X = [[ref_traj.x[ind],ref_traj.y[ind],ref_traj.psi[ind]]\
+    #           for ind in range(len(ref_traj.x))] # n
+    # # ref U 
+    # ref_U = np.array([[ref_traj.delta[ind],ref_traj.v[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1  
     # 参考轨迹
     # ref_traj_base_U = RefTraj() 
     # ref_traj_base_U.generate_traj_base_seq_control(ref_U[:,1],ref_U[:,0])
@@ -48,9 +47,7 @@ def test_vehicle_model_controlA_sin_curva():
         # if i > 40:
             # ref_X[i][0] += 0
             # ref_X[i][1] += 10
-    ref_U = np.array([[ref_traj.delta[ind],ref_traj.v[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1
-    draw_util.draw_state(ref_X,"x-y-psi","ref_traj_base_U") # 
-    draw_util.draw_contour(ref_U,"delta-v","ref_traj_base_U")
+    # ref_U = np.array([[ref_traj.delta[ind],ref_traj.v[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1
     # vehicle_model = SingleVehicleControlV(2.3)
 
     def LQR_solver():
@@ -175,13 +172,22 @@ def test_vehicle_model_controlA_sin_curva():
         return opt_traj,opt_u
 
     def iLQR_solver():
-        vehicle_model = SingleVehicleControlV(2.3)
+        ref_X = [[ref_traj.x[ind],ref_traj.y[ind],ref_traj.v[ind],ref_traj.psi[ind]]\
+                for ind in range(len(ref_traj.x))] # n
+        # ref U 
+        ref_U = np.array([[ref_traj.a[ind],ref_traj.delta[ind]] for ind in range(len(ref_traj.x)-1)]) # n-1 
+        draw_util.draw_state(ref_X,"x-y-psi","ref_traj_base_U") # 
+        draw_util.draw_contour(ref_U,"delta-v","ref_traj_base_U")
+        # 第一个点用ref的起点，是ok的
+        vehicle_model = CILQRModel(2.3)
         xn = len(ref_X[0])
         un = len(ref_U[0])
         ilqr = iLQR(xn,un)
-        return ilqr.opt(vehicle_model.state_space,np.array(ref_X),np.array(ref_U),10,vehicle_model.update)
+        return ilqr.opt(vehicle_model.state_space,np.array(ref_X),np.array(ref_U),10,vehicle_model.update,vehicle_model)
     
-    opt_traj,opt_u = LQR_solver()
+    opt_traj,opt_u = iLQR_solver()
+    # opt_traj,opt_u = LQR_solver()
+    # opt_traj,opt_u = LQR_racati_solver()
     draw_util.draw_state(opt_traj,"x-y-psi","opt_traj")
     draw_util.draw_contour(opt_u,"delta-v","opt_traj_U")
 

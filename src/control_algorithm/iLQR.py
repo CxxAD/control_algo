@@ -52,9 +52,10 @@ class iLQR(lqr.LQR):
         #     self.Du[i] = 1
 
         self.Q = np.array([
-            [1,0,0],
-            [0,1,0],
-            [0,0,1]
+            [1,0,0,0],
+            [0,1,0,0],
+            [0,0,1,0],
+            [0,0,0,0]
         ])
         self.R = np.array([
             [1,0],
@@ -70,18 +71,23 @@ class iLQR(lqr.LQR):
             [1]
         ])
 
-    def _find_cloest_point(self,x,x_ref):
+    def _find_cloest_point(self,x,ref_X):
         """
         找到最近点
         """
-        min_dis = np.linalg.norm(x - x_ref[0])
-        min_ind = 0
-        for i in range(1,len(x_ref)):
-            dis = np.linalg.norm(x - x_ref[i])
-            if dis < min_dis:
-                min_dis = dis
-                min_ind = i
-        return min_ind
+        d_x = []
+        d_y = []
+        d = []
+        for k in range(len(ref_X)):
+            if k == len(ref_X) - 1:
+                break
+            d_x.append(ref_X[k][0]- x[0])
+            d_y.append(ref_X[k][1] -x[1])
+            d.append((d_x[k] ** 2 + d_y[k] ** 2)**0.5)
+        # 
+        min_d = min(d)
+        ref_ind = d.index(min_d)
+        return ref_ind
 
     def gener_drivatives(self,X,U,x_ref,u_ref,xn,un,u_num):
         Lx = np.zeros((u_num,xn,1))
@@ -93,13 +99,15 @@ class iLQR(lqr.LQR):
         # 只要求跟好状态量，因此，控制量期望可以为0.
         for i in range(u_num):
             # 控制量期望为0，所以 U[i] - [0,0..]
-            Lu[i] = 2*self.R @ U[i].reshape((un,1)) + self.Du  
+            _u = np.array([U[i][0] - 0,U[i][1] - 2])
+            Lu[i] = 2*self.R @ _u.reshape((un,1))
             Luu[i] = 2*self.R
             Lxu[i] = np.zeros((xn,un))
             Lux[i] = np.zeros((un,xn))
             c_ind = self._find_cloest_point(X[i],x_ref)
             # 以参考为期望，合理的。-->以最近点为期望也行，但是就变成迭代的过程了。
-            Lx[i] =  2*self.Q @ (X[i] - x_ref[c_ind]).reshape((xn,1)) + self.Dx
+            _x = np.array([X[i][0] - x_ref[c_ind][0],X[i][1] - x_ref[c_ind][1],X[i][2] - 2,0])
+            Lx[i] =  2*self.Q @ _x.reshape((xn,1)) 
             Lxx[i] = 2*self.Q
         return Lx,Lu,Lxx,Luu,Lux,Lxu
 
@@ -107,11 +115,11 @@ class iLQR(lqr.LQR):
         X = np.zeros((len(U)+1,len(X_0)))
         X[0] = X_0
         for i in range(len(U)):
-            print(func(X[i],U[i]))
+            # print(func(X[i],U[i]))
             X[i+1] = func(X[i],U[i])
         return X
 
-    def opt(self,f_AB,ref_X,ref_U,iter_num,func):
+    def opt(self,f_AB,ref_X,ref_U,iter_num,func,model):
         x_num = len(ref_X)
         u_num = len(ref_U) 
         xn = len(ref_X[0])
@@ -121,11 +129,15 @@ class iLQR(lqr.LQR):
         
         X_0 = ref_X[0]
         U = np.zeros((u_num,un))
-        X = self.gener_init_traj(X_0,U,func)
+        # 生成初始解
+        U[:,0] = 0.5
+        X = self.gener_init_traj(X_0,U,func)  # 
 
         # 构建误差模型二次型的Q,R矩阵
         for i in range(iter_num):
             print("iter num:",i)
+            # 重置运动学模型：
+            # model.reset(*ref_X[0],ref_U[0][1])
             drwa_util = DrawUtil()
             for ind in range(len(ref_X)-1):
                 _A,_B = f_AB(X[ind+1],U[ind]) # 优化轨迹自身作为展开点,通过不断迭代来逼近参考轨迹。

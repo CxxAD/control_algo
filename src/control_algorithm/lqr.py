@@ -16,7 +16,16 @@ Q:
 A：LQR的局限性，能使用的信息有限，只能依靠起点、终点两个点来进行优化，一旦模型本身需要展开点信息，则要求参考轨迹相对合理，能光滑过渡才行。理论上，迭代解法应该可以解决该问题，<待尝试>。
 """
 import numpy as np 
+import os 
+import sys
+# 将当前目录的上一级目录加入到系统路径中
+current_file_path = os.path.abspath(__file__)
+current_dir = os.path.dirname(current_file_path)
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
 
+from utils.math_util import normalize_angle
 class LQR:
 
     def __init__(self) -> None:
@@ -77,6 +86,8 @@ class LQR:
             V_x = C_x + C_xu @ k + K.T @ C_u  + K.T @ C_uu @ k
             # const = const + k.T @ C_u + 0.5 * k.T @ C_uu @ k
             # 这里这个ind，怎么选择？
+            print("A",A)
+            print("B",B)
             C_xx = Q_xx[ind] + A[ind].T @ V_xx @ A[ind]
             C_xu = Q_xu[ind] + A[ind].T @ V_xx @ B[ind]
             C_ux = Q_ux[ind] + B[ind].T @ V_xx @ A[ind]
@@ -87,12 +98,15 @@ class LQR:
 
             
     def _forward_pass(self,x_init,k_seq,K_seq,A,B,X,U,num,func):
+        print("x_init:",x_init)
         x_new_seq = np.zeros((num,len(x_init)))
         u_new_seq = np.zeros((num-1,len(k_seq[0])))
         x_new_seq[0] = x_init
         for ind in range(num-1):
+            # 前轮转角为控制量，这个运算会有问题，因为可能出现减法，角度的加减运算，不满足线性规则。
             u_new = (k_seq[ind].flatten() + (K_seq[ind] @ (x_new_seq[ind] - X[ind]).T) + U[ind]).T
-            print(x_new_seq[ind],u_new)
+            u_new[0] = normalize_angle(u_new[0])
+            print("update:",x_new_seq[ind],u_new)
             x_new_seq[ind+1] = func(x_new_seq[ind],u_new) # 用原非线性函数更新状态量，减小误差。
             u_new_seq[ind] = u_new
         return x_new_seq,u_new_seq
@@ -104,5 +118,6 @@ class LQR:
         k_seq,K_seq = self._backward_pass(A,B,lxx,luu,l_x,l_u,lxu,lux,xn,un,num)
         # 因为是用的x,u做的展开点，所以这里生成的时候，还是用的x,u 
         x_new_seq,u_new_seq = self._forward_pass(x_init,k_seq,K_seq,A,B,x,u,num+1,func)
+        
         return x_new_seq,u_new_seq
 
